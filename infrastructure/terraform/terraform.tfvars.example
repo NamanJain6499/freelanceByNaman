@@ -1,0 +1,20 @@
+# Copy this file to terraform.tfvars and update the values
+
+domain_name = "namanjain.dev"
+aws_region  = "us-east-1"
+
+project_name = "portfolio"
+environment  = "prod"
+
+# Optional - will be auto-generated if not provided
+# s3_bucket_name = "my-custom-bucket-name"
+
+cloudfront_price_class = "PriceClass_100"
+
+# Enable WAF for additional protection (requires additional AWS charges)
+enable_waf = false
+
+# Contact form settings
+enable_contact_form_email = false
+contact_form_to_email     = "your-email@example.com"
+contact_form_from_email   = "noreply@namanjain.dev"

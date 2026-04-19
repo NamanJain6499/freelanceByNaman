@@ -1,0 +1,55 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-black text-zinc-100 antialiased;
+    font-family: Inter, system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  .container-x {
+    @apply max-w-6xl mx-auto px-5 sm:px-6;
+  }
+  .section {
+    @apply py-20 md:py-28;
+  }
+  .mono {
+    font-family: "DM Mono", ui-monospace, monospace;
+  }
+  .serif {
+    font-family: "Instrument Serif", Georgia, serif;
+  }
+  .accent-text {
+    @apply text-lime-300 italic;
+  }
+  .btn-accent {
+    @apply bg-lime-300 text-[#0a0a0b] hover:bg-lime-200 transition-colors;
+  }
+  .btn-ghost {
+    @apply border border-[#24242a] text-zinc-200 hover:border-lime-300/40 hover:text-lime-200 transition-colors;
+  }
+  .card-surface {
+    @apply rounded-2xl border border-[#1c1c1f] bg-[#0f0f11] transition-colors;
+  }
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.marquee-track {
+  animation: marquee 38s linear infinite;
+}

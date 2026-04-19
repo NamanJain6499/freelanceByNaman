@@ -1,0 +1,11 @@
+# Lambda function dependencies
+# Add any additional Python packages here
+
+# For AWS SDK (boto3) - usually pre-installed in Lambda runtime
+# boto3>=1.28.0
+
+# For SES email functionality (if using send_email_via_ses)
+# No additional packages needed - uses boto3
+
+# For validation or other utilities
+# email-validator>=2.0.0
