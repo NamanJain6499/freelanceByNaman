@@ -8,6 +8,11 @@ terraform {
       version = "~> 5.0"
     }
   }
+
+  # Use the bucket itself for state once it exists
+  backend "s3" {
+    use_lockfile = true
+  }
 }
 
 variable "bucket_name" {
