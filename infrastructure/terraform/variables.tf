@@ -1,6 +1,7 @@
 variable "domain_name" {
-  description = "Primary domain name for the site (e.g., namanjain.dev)"
+  description = "Primary domain name for the site (e.g., namanjain.dev). Leave empty to use CloudFront domain only."
   type        = string
+  default     = ""
 }
 
 variable "aws_region" {

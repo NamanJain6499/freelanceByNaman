@@ -1,11 +1,6 @@
-# Use existing Route53 zone passed from root
-data "aws_route53_zone" "this" {
-  name = var.domain_name
-}
-
 # A record for apex domain -> CloudFront
 resource "aws_route53_record" "apex" {
-  zone_id = data.aws_route53_zone.this.zone_id
+  zone_id = var.route53_zone_id
   name    = var.domain_name
   type    = "A"
 
@@ -18,7 +13,7 @@ resource "aws_route53_record" "apex" {
 
 # AAAA record for apex domain (IPv6)
 resource "aws_route53_record" "apex_ipv6" {
-  zone_id = data.aws_route53_zone.this.zone_id
+  zone_id = var.route53_zone_id
   name    = var.domain_name
   type    = "AAAA"
 
@@ -31,7 +26,7 @@ resource "aws_route53_record" "apex_ipv6" {
 
 # CNAME for www -> CloudFront
 resource "aws_route53_record" "www" {
-  zone_id = data.aws_route53_zone.this.zone_id
+  zone_id = var.route53_zone_id
   name    = "www.${var.domain_name}"
   type    = "CNAME"
   ttl     = 300

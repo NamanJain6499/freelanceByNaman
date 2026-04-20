@@ -10,7 +10,7 @@ output "lambda_function_arn" {
 
 output "api_endpoint" {
   description = "API Gateway endpoint URL"
-  value       = "${aws_api_gateway_deployment.this.invoke_url}/contact"
+  value       = "https://${aws_api_gateway_rest_api.this.id}.execute-api.${data.aws_region.current.name}.amazonaws.com/${var.environment}/contact"
 }
 
 output "api_id" {

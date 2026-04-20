@@ -1,3 +1,6 @@
+# Get current region
+data "aws_region" "current" {}
+
 # IAM Role for Lambda
 resource "aws_iam_role" "lambda" {
   name = "${var.name}-lambda-role"

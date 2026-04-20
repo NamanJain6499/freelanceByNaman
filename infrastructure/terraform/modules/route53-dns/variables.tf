@@ -23,3 +23,8 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "route53_zone_id" {
+  description = "Route53 zone ID for DNS records"
+  type        = string
+}
