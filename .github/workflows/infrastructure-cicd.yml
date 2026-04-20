@@ -58,7 +58,15 @@ jobs:
         working-directory: infrastructure/terraform/bootstrap
         run: |
           terraform init
-          # Always run apply to ensure bucket exists (idempotent)
+          # Check if bucket already exists in AWS, import it if so
+          if aws s3api head-bucket --bucket ${{ secrets.TF_STATE_BUCKET }} 2>/dev/null; then
+            echo "Bucket exists, importing into state..."
+            terraform import aws_s3_bucket.terraform_state ${{ secrets.TF_STATE_BUCKET }} || true
+            terraform import aws_s3_bucket_versioning.terraform_state ${{ secrets.TF_STATE_BUCKET }} || true
+            terraform import aws_s3_bucket_server_side_encryption_configuration.terraform_state ${{ secrets.TF_STATE_BUCKET }} || true
+            terraform import aws_s3_bucket_public_access_block.terraform_state ${{ secrets.TF_STATE_BUCKET }} || true
+          fi
+          # Now apply to ensure all configs are correct
           terraform apply -auto-approve -var="bucket_name=${{ secrets.TF_STATE_BUCKET }}"
           echo "complete=true" >> $GITHUB_OUTPUT
 
