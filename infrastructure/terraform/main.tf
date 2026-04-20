@@ -7,6 +7,11 @@ terraform {
   }
 
   required_version = ">= 1.5.0"
+
+  # Backend configured via CLI in CI/CD
+  backend "s3" {
+    use_lockfile = true
+  }
 }
 
 # Primary region for most resources

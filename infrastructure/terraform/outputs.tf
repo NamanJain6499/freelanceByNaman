@@ -54,11 +54,11 @@ output "terraform_state_backend_config" {
 
 # Add this to your terraform backend config after the first apply:
 backend "s3" {
-  bucket         = "${local.bucket_name}-tfstate"
-  key            = "${var.project_name}/${var.environment}/terraform.tfstate"
-  region         = "${var.aws_region}"
-  encrypt        = true
-  dynamodb_table = "${local.name_prefix}-terraform-locks"
+  bucket       = "${local.bucket_name}-tfstate"
+  key          = "${var.project_name}/${var.environment}/terraform.tfstate"
+  region       = "${var.aws_region}"
+  encrypt      = true
+  use_lockfile = true
 }
 EOT
 }
