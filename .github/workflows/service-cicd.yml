@@ -205,13 +205,24 @@ jobs:
       - name: Package and Deploy Contact Form Lambda
         working-directory: infrastructure/lambda
         run: |
-          # Create deployment package
-          pip install -r requirements.txt -t package/ 2>/dev/null || true
-          cd package && zip -r ../contact-form.zip . && cd ..
-          zip -j contact-form.zip contact-form.py
+          # Check if Lambda function exists (skip if not deployed)
+          if ! aws lambda get-function --function-name "${{ secrets.PROJECT_NAME || 'portfolio' }}-prod-contact-form" 2>/dev/null; then
+            echo "Lambda function not found, skipping deployment"
+            exit 0
+          fi
 
-          # Get Lambda function name from Terraform outputs
-          terraform -chdir=../terraform output -raw contact_form_lambda_name 2>/dev/null || echo "contact-form"
+          # Use pre-built zip if it exists, otherwise create it
+          if [ ! -f contact-form.zip ]; then
+            echo "Creating deployment package..."
+            # Start with the Lambda function code
+            zip -j contact-form.zip contact-form.py
+            # Add dependencies if any exist
+            mkdir -p package
+            pip install -r requirements.txt -t package/ 2>/dev/null || true
+            if [ "$(ls -A package/ 2>/dev/null)" ]; then
+              cd package && zip -r ../contact-form.zip . && cd ..
+            fi
+          fi
 
           # Update Lambda function code
           aws lambda update-function-code \
@@ -224,10 +235,14 @@ jobs:
 
       - name: Verify Lambda Update
         run: |
-          aws lambda get-function \
-            --function-name "${{ secrets.PROJECT_NAME || 'portfolio' }}-prod-contact-form" \
-            --query 'Configuration.LastUpdateStatus' \
-            --output text
+          if aws lambda get-function --function-name "${{ secrets.PROJECT_NAME || 'portfolio' }}-prod-contact-form" 2>/dev/null; then
+            aws lambda get-function \
+              --function-name "${{ secrets.PROJECT_NAME || 'portfolio' }}-prod-contact-form" \
+              --query 'Configuration.LastUpdateStatus' \
+              --output text
+          else
+            echo "Lambda not deployed, skipping verification"
+          fi
 
       - name: Lambda Deploy Summary
         run: |
