@@ -38,16 +38,15 @@ Enter your AWS credentials when prompted. Save the **Role ARN** output.
 
 Go to: `Settings → Secrets and variables → Actions`
 
-| Secret | Value |
-|--------|-------|
-| `AWS_ROLE_ARN` | From step 1 |
-| `TF_STATE_BUCKET` | `portfolio-terraform-state-478747265059` |
-| `TF_LOCK_TABLE` | `terraform-locks` |
-| `DOMAIN_NAME` | Your domain (optional) |
-| `CONTACT_EMAIL` | Your email |
-| `PROJECT_NAME` | `portfolio` |
-| `ENABLE_WAF` | `false` |
-| `ENABLE_CONTACT_FORM` | `false` |
+| Secret | Value | Required |
+|--------|-------|----------|
+| `AWS_ROLE_ARN` | From step 1 | Yes |
+| `TF_STATE_BUCKET` | `portfolio-terraform-state-<account-id>` | Yes |
+| `DOMAIN_NAME` | Your domain (optional) | No |
+| `CONTACT_EMAIL` | Your email | No |
+| `PROJECT_NAME` | `portfolio` | No (defaults to portfolio) |
+| `ENABLE_WAF` | `false` | No |
+| `ENABLE_CONTACT_FORM` | `false` | No |
 
 ### 3. Deploy
 
@@ -62,32 +61,34 @@ Pushing triggers both pipelines:
 ## Repository Structure
 
 ```
-├── app/frontend/                    # React application
+├── app/frontend/                    # React + TypeScript + Vite application
 │   ├── src/
+│   ├── dist/                        # Build output (generated)
 │   └── package.json
 │
 ├── infrastructure/
 │   ├── terraform/                   # Infrastructure as Code
-│   │   ├── main.tf
+│   │   ├── main.tf                  # Main configuration
 │   │   ├── variables.tf
 │   │   ├── outputs.tf
+│   │   ├── bootstrap/               # One-time Terraform backend setup
 │   │   └── modules/                 # Reusable modules
-│   │       ├── s3-static-website/
-│   │       ├── cloudfront-cdn/
-│   │       ├── acm-certificate/
-│   │       ├── route53-dns/
-│   │       ├── contact-form-api/
-│   │       └── waf/
-│   ├── terraform/bootstrap/         # One-time backend setup
+│   │       ├── s3-static-website/   # S3 bucket with OAC
+│   │       ├── cloudfront-cdn/      # CloudFront distribution
+│   │       ├── acm-certificate/     # SSL certificates
+│   │       ├── route53-dns/         # DNS records
+│   │       ├── contact-form-api/    # Lambda + API Gateway
+│   │       └── waf/                 # Web Application Firewall
 │   └── lambda/
-│       └── contact-form.py
+│       └── contact-form.py          # Contact form handler
 │
 ├── .github/workflows/               # CI/CD Pipelines
-│   ├── infrastructure-cicd.yml    # Infrastructure deployment
-│   └── service-cicd.yml           # Frontend + Lambda deployment
+│   ├── infrastructure-cicd.yml      # Infrastructure deployment
+│   └── service-cicd.yml             # Frontend + Lambda deployment
 │
-├── setup-oidc.sh                    # One-time AWS setup
-└── DEPLOYMENT.md                    # Full deployment guide
+├── setup-oidc.sh                    # One-time AWS OIDC setup
+├── DEPLOYMENT.md                    # Detailed deployment guide
+└── README.md                        # This file
 ```
 
 ## Pipelines
@@ -102,11 +103,12 @@ Pushing triggers both pipelines:
 - Manual trigger → Deploy or Destroy
 
 **Creates:**
-- S3 bucket (private, versioned)
+- S3 bucket (private, versioned, encrypted)
 - CloudFront distribution (with OAC)
 - Route53 zone and records (if domain provided)
-- ACM certificate
-- Lambda + API Gateway
+- ACM certificate (us-east-1)
+- Lambda + API Gateway (if enabled)
+- WAF Web ACL (if enabled)
 
 ### Service CI/CD
 
@@ -118,21 +120,50 @@ Pushing triggers both pipelines:
 
 **Steps:**
 1. Get infrastructure outputs from Terraform state
-2. Install dependencies and build
-3. Deploy to S3 (optimized caching)
-4. Invalidate CloudFront
+2. Install dependencies and build with Vite
+3. Deploy to S3 with optimized caching:
+   - JS/CSS assets: immutable, 1 year cache
+   - HTML files: no cache, must-revalidate
+4. Invalidate CloudFront cache
+
+**S3 Deployment Strategy:**
+- Files are synced to S3 with proper Content-Type headers
+- Hashed assets (JS/CSS) get long-term caching headers
+- HTML files get no-cache headers for SPA routing
+- CloudFront cache invalidation ensures fresh content
 
 ## Local Development
 
+### Frontend Development
+
 ```bash
-# Frontend
 cd app/frontend
 npm install
-npm run dev        # http://localhost:5173
+npm run dev        # Vite dev server at http://localhost:5173
+npm run build      # Production build to dist/
+npm run preview    # Preview production build locally
+```
 
-# Infrastructure (dry-run)
+### Infrastructure Development
+
+```bash
 cd infrastructure/terraform
+
+# Initialize (first time only)
+terraform init
+
+# Plan changes
 terraform plan
+
+# Apply changes (requires AWS credentials)
+terraform apply
+```
+
+**Required Environment Variables for Local Terraform:**
+```bash
+export AWS_REGION=us-east-1
+export TF_VAR_project_name=portfolio
+export TF_VAR_environment=prod
 ```
 
 ## Custom Domain
@@ -160,6 +191,16 @@ terraform plan
 | Lambda | Free (1M requests) |
 | API Gateway | Free (1M requests) |
 | **Total** | **$0-5** |
+
+## Troubleshooting
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| **Black screen after deploy** | Wrong Content-Type on JS files | Hard refresh (Ctrl+F5) to clear cache |
+| **CloudFront 403 error** | Missing index.html or wrong bucket policy | Verify S3 files and invalidate cache |
+| **Changes not showing** | CloudFront caching | Wait 1-2 min or create invalidation |
+| "Access Denied" | Wrong AWS_ROLE_ARN | Check secret matches OIDC setup output |
+| "No outputs" | Infrastructure not deployed | Run Infrastructure CI/CD first |
 
 ## Documentation
 
