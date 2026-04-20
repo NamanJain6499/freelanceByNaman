@@ -120,35 +120,29 @@ jobs:
         working-directory: app/frontend
         run: npm run build
 
-      - name: Deploy to S3 (Assets with Cache)
+      - name: Deploy to S3
         run: |
-          echo "Deploying hashed assets to S3..."
+          echo "Deploying all files to S3..."
+          # First, sync everything with default cache settings
           aws s3 sync app/frontend/dist/ s3://${{ needs.get-infra-outputs.outputs.bucket_name }}/ \
-            --delete \
-            --cache-control "public, max-age=31536000, immutable" \
-            --exclude "*.html" \
-            --exclude "*.txt" \
-            --exclude "*.xml" \
-            --exclude "_redirects"
+            --delete
 
-      - name: Deploy to S3 (HTML with No Cache)
-        run: |
-          echo "Deploying HTML files to S3..."
-          aws s3 sync app/frontend/dist/ s3://${{ needs.get-infra-outputs.outputs.bucket_name }}/ \
+          # Then set cache headers for hashed assets (immutable)
+          aws s3 cp s3://${{ needs.get-infra-outputs.outputs.bucket_name }}/assets/ \
+            s3://${{ needs.get-infra-outputs.outputs.bucket_name }}/assets/ \
+            --recursive \
+            --cache-control "public, max-age=31536000, immutable" \
+            --metadata-directive REPLACE
+
+          # Set no-cache headers for HTML files
+          aws s3 cp s3://${{ needs.get-infra-outputs.outputs.bucket_name }}/ \
+            s3://${{ needs.get-infra-outputs.outputs.bucket_name }}/ \
+            --recursive \
+            --exclude "*" \
+            --include "*.html" \
             --cache-control "public, max-age=0, must-revalidate" \
             --content-type "text/html; charset=utf-8" \
-            --include "*.html" \
-            --exclude "*"
-
-      - name: Deploy to S3 (Other Files)
-        run: |
-          echo "Deploying other static files..."
-          aws s3 sync app/frontend/dist/ s3://${{ needs.get-infra-outputs.outputs.bucket_name }}/ \
-            --cache-control "public, max-age=86400" \
-            --include "*.txt" \
-            --include "*.xml" \
-            --include "_redirects" \
-            --exclude "*"
+            --metadata-directive REPLACE
 
       - name: Invalidate CloudFront Cache
         run: |
