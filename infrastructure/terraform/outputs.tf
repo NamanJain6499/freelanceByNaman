@@ -35,12 +35,12 @@ output "certificate_arn" {
 
 output "route53_zone_id" {
   description = "Route53 hosted zone ID"
-  value       = module.dns.zone_id
+  value       = aws_route53_zone.this.zone_id
 }
 
 output "name_servers" {
   description = "Route53 name servers (update your domain registrar)"
-  value       = module.dns.name_servers
+  value       = aws_route53_zone.this.name_servers
 }
 
 output "contact_form_lambda_name" {

@@ -65,7 +65,7 @@ if [ -n "$OIDC_EXISTS" ]; then
 else
     aws iam create-open-id-connect-provider \
         --url https://token.actions.githubusercontent.com \
-        --thumbprint-list 6938fd4e98bab1faadb97b34396831e3780aea1 \
+        --thumbprint-list 6938fd4e98bab1fa863186ae26ebb0a0decd5e8d \
         --client-id-list sts.amazonaws.com
     echo -e "${GREEN}✅ OIDC Provider created${NC}"
 fi

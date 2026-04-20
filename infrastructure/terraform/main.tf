@@ -7,9 +7,6 @@ terraform {
   }
 
   required_version = ">= 1.5.0"
-
-  # Backend configured via CLI in CI/CD
-  # Local backend used for initial bootstrap
 }
 
 # Primary region for most resources
@@ -38,6 +35,12 @@ locals {
   bucket_name = var.s3_bucket_name != "" ? var.s3_bucket_name : "${var.domain_name}-assets-${data.aws_caller_identity.current.account_id}"
 }
 
+# Route53 Hosted Zone (created first)
+resource "aws_route53_zone" "this" {
+  name = var.domain_name
+  tags = local.common_tags
+}
+
 # ACM Certificate (must be in us-east-1 for CloudFront)
 module "acm" {
   source = "./modules/acm-certificate"
@@ -48,6 +51,31 @@ module "acm" {
   domain_name               = var.domain_name
   subject_alternative_names = ["www.${var.domain_name}"]
   tags                      = local.common_tags
+}
+
+# Certificate validation records in Route53
+resource "aws_route53_record" "cert_validation" {
+  for_each = {
+    for dvo in module.acm.domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      record = dvo.resource_record_value
+      type   = dvo.resource_record_type
+    }
+  }
+
+  zone_id = aws_route53_zone.this.zone_id
+  name    = each.value.name
+  type    = each.value.type
+  records = [each.value.record]
+  ttl     = 60
+}
+
+# ACM Certificate Validation (waits for DNS)
+resource "aws_acm_certificate_validation" "this" {
+  provider = aws.us_east_1
+
+  certificate_arn         = module.acm.certificate_arn
+  validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
 }
 
 # WAF (optional)
@@ -64,6 +92,15 @@ module "waf" {
   tags        = local.common_tags
 }
 
+# S3 Bucket for static assets
+module "s3" {
+  source = "./modules/s3-static-website"
+
+  bucket_name                 = local.bucket_name
+  cloudfront_distribution_arn = module.cdn.distribution_arn
+  tags                        = local.common_tags
+}
+
 # CloudFront Distribution
 module "cdn" {
   source = "./modules/cloudfront-cdn"
@@ -77,26 +114,21 @@ module "cdn" {
   price_class         = var.cloudfront_price_class
   waf_web_acl_arn     = var.enable_waf ? module.waf.web_acl_arn : null
   tags                = local.common_tags
+
+  depends_on = [aws_acm_certificate_validation.this]
 }
 
-# S3 Bucket for static assets
-module "s3" {
-  source = "./modules/s3-static-website"
-
-  bucket_name                 = local.bucket_name
-  cloudfront_distribution_arn = module.cdn.distribution_arn
-  tags                        = local.common_tags
-}
-
-# Route53 DNS Records
+# Route53 DNS Records for the site (created after CloudFront)
 module "dns" {
   source = "./modules/route53-dns"
 
   domain_name               = var.domain_name
-  domain_validation_options = module.acm.domain_validation_options
+  domain_validation_options = [] # Already handled above
   cloudfront_domain_name    = module.cdn.distribution_domain_name
   cloudfront_hosted_zone_id = module.cdn.distribution_hosted_zone_id
   tags                      = local.common_tags
+
+  depends_on = [module.cdn]
 }
 
 # Contact Form API (Lambda + API Gateway)
@@ -110,14 +142,4 @@ module "contact_api" {
   from_email      = var.contact_form_from_email
   enable_ses      = var.enable_contact_form_email
   tags            = local.common_tags
-}
-
-# ACM Certificate Validation (must wait for DNS records)
-resource "aws_acm_certificate_validation" "this" {
-  provider = aws.us_east_1
-
-  certificate_arn         = module.acm.certificate_arn
-  validation_record_fqdns = [for record in module.acm.domain_validation_options : record.resource_record_name]
-
-  depends_on = [module.dns]
 }

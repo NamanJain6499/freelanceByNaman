@@ -1,30 +1,11 @@
-# Route53 Hosted Zone
-resource "aws_route53_zone" "this" {
+# Use existing Route53 zone passed from root
+data "aws_route53_zone" "this" {
   name = var.domain_name
-
-  tags = var.tags
-}
-
-# Certificate validation records (from ACM)
-resource "aws_route53_record" "cert_validation" {
-  for_each = {
-    for dvo in var.domain_validation_options : dvo.domain_name => {
-      name   = dvo.resource_record_name
-      record = dvo.resource_record_value
-      type   = dvo.resource_record_type
-    }
-  }
-
-  zone_id = aws_route53_zone.this.zone_id
-  name    = each.value.name
-  type    = each.value.type
-  records = [each.value.record]
-  ttl     = 60
 }
 
 # A record for apex domain -> CloudFront
 resource "aws_route53_record" "apex" {
-  zone_id = aws_route53_zone.this.zone_id
+  zone_id = data.aws_route53_zone.this.zone_id
   name    = var.domain_name
   type    = "A"
 
@@ -37,7 +18,7 @@ resource "aws_route53_record" "apex" {
 
 # AAAA record for apex domain (IPv6)
 resource "aws_route53_record" "apex_ipv6" {
-  zone_id = aws_route53_zone.this.zone_id
+  zone_id = data.aws_route53_zone.this.zone_id
   name    = var.domain_name
   type    = "AAAA"
 
@@ -50,7 +31,7 @@ resource "aws_route53_record" "apex_ipv6" {
 
 # CNAME for www -> CloudFront
 resource "aws_route53_record" "www" {
-  zone_id = aws_route53_zone.this.zone_id
+  zone_id = data.aws_route53_zone.this.zone_id
   name    = "www.${var.domain_name}"
   type    = "CNAME"
   ttl     = 300
