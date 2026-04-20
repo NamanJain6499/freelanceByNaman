@@ -145,7 +145,7 @@ module "contact_api" {
 
   name            = local.name_prefix
   environment     = var.environment
-  lambda_zip_path = "${path.module}/lambda/contact-form.zip"
+  lambda_zip_path = "${path.module}/../lambda/contact-form.zip"
   to_email        = var.contact_form_to_email
   from_email      = var.contact_form_from_email
   enable_ses      = var.enable_contact_form_email
