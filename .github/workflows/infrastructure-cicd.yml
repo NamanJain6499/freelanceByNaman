@@ -61,7 +61,7 @@ jobs:
           if aws s3api head-bucket --bucket ${{ secrets.TF_STATE_BUCKET }} 2>/dev/null; then
             echo "Bucket exists, using S3 backend with import..."
             # Init with S3 backend and import existing resources
-            terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" -backend-config="key=bootstrap/terraform.tfstate" -backend-config="region=us-east-1" -backend-config="encrypt=true" -backend-config="use_lockfile=true"
+            terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" -backend-config="key=bootstrap/terraform.tfstate" -backend-config="region=us-east-1" -backend-config="encrypt=true"
             terraform import aws_s3_bucket.terraform_state ${{ secrets.TF_STATE_BUCKET }} 2>/dev/null || true
             terraform import aws_s3_bucket_versioning.terraform_state ${{ secrets.TF_STATE_BUCKET }} 2>/dev/null || true
             terraform import aws_s3_bucket_server_side_encryption_configuration.terraform_state ${{ secrets.TF_STATE_BUCKET }} 2>/dev/null || true
@@ -74,7 +74,7 @@ jobs:
             terraform apply -auto-approve -var="bucket_name=${{ secrets.TF_STATE_BUCKET }}"
             # Now migrate to S3 backend
             echo "Migrating state to S3..."
-            terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" -backend-config="key=bootstrap/terraform.tfstate" -backend-config="region=us-east-1" -backend-config="encrypt=true" -backend-config="use_lockfile=true" -migrate-state
+            terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" -backend-config="key=bootstrap/terraform.tfstate" -backend-config="region=us-east-1" -backend-config="encrypt=true" -migrate-state
           fi
           # Final apply to ensure all configs are correct
           terraform apply -auto-approve -var="bucket_name=${{ secrets.TF_STATE_BUCKET }}"
