@@ -58,11 +58,8 @@ jobs:
         working-directory: infrastructure/terraform/bootstrap
         run: |
           terraform init
-          terraform plan -detailed-exitcode -var="bucket_name=${{ secrets.TF_STATE_BUCKET }}" 2>&1 || EXITCODE=$? && true
-          if [ "$EXITCODE" -eq 2 ]; then
-            echo "Changes needed, applying..."
-            terraform apply -auto-approve -var="bucket_name=${{ secrets.TF_STATE_BUCKET }}"
-          fi
+          # Always run apply to ensure bucket exists (idempotent)
+          terraform apply -auto-approve -var="bucket_name=${{ secrets.TF_STATE_BUCKET }}"
           echo "complete=true" >> $GITHUB_OUTPUT
 
   # Phase 2: Plan (runs on PR)
