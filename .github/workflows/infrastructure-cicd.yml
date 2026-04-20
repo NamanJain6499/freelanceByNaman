@@ -64,23 +64,23 @@ jobs:
           if aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
             echo "Bucket exists, using S3 backend with import..."
             # Init with S3 backend and import existing resources
-            terraform init -backend-config="bucket=$BUCKET_NAME" -backend-config="key=bootstrap/terraform.tfstate" -backend-config="region=us-east-1" -backend-config="encrypt=true"
-            terraform import aws_s3_bucket.terraform_state "$BUCKET_NAME" 2>/dev/null || true
-            terraform import aws_s3_bucket_versioning.terraform_state "$BUCKET_NAME" 2>/dev/null || true
-            terraform import aws_s3_bucket_server_side_encryption_configuration.terraform_state "$BUCKET_NAME" 2>/dev/null || true
-            terraform import aws_s3_bucket_public_access_block.terraform_state "$BUCKET_NAME" 2>/dev/null || true
+            terraform init -input=false -backend-config="bucket=$BUCKET_NAME" -backend-config="key=bootstrap/terraform.tfstate" -backend-config="region=us-east-1" -backend-config="encrypt=true"
+            terraform import -input=false aws_s3_bucket.terraform_state "$BUCKET_NAME" 2>/dev/null || true
+            terraform import -input=false aws_s3_bucket_versioning.terraform_state "$BUCKET_NAME" 2>/dev/null || true
+            terraform import -input=false aws_s3_bucket_server_side_encryption_configuration.terraform_state "$BUCKET_NAME" 2>/dev/null || true
+            terraform import -input=false aws_s3_bucket_public_access_block.terraform_state "$BUCKET_NAME" 2>/dev/null || true
           else
             echo "Bucket does not exist, creating with local state first..."
             # Init with local backend (no config)
-            terraform init -backend=false
+            terraform init -input=false -backend=false
             # Create bucket using local state
-            terraform apply -auto-approve -var="bucket_name=$BUCKET_NAME"
+            terraform apply -input=false -auto-approve -var="bucket_name=$BUCKET_NAME"
             # Now migrate to S3 backend
             echo "Migrating state to S3..."
-            terraform init -backend-config="bucket=$BUCKET_NAME" -backend-config="key=bootstrap/terraform.tfstate" -backend-config="region=us-east-1" -backend-config="encrypt=true" -migrate-state
+            terraform init -input=false -backend-config="bucket=$BUCKET_NAME" -backend-config="key=bootstrap/terraform.tfstate" -backend-config="region=us-east-1" -backend-config="encrypt=true" -migrate-state
           fi
           # Final apply to ensure all configs are correct
-          terraform apply -auto-approve -var="bucket_name=$BUCKET_NAME"
+          terraform apply -input=false -auto-approve -var="bucket_name=$BUCKET_NAME"
           echo "complete=true" >> $GITHUB_OUTPUT
 
   # Phase 2: Plan (runs on PR)
