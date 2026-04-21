@@ -72,9 +72,12 @@ def handler(event, context):
         # Log submission
         print(f"Contact form submission: {json.dumps(submission)}")
 
-        # Note: SES email sending requires domain/email verification in AWS SES
-        # Uncomment and configure below after SES setup
-        # send_email_via_ses(submission)
+        # Send email via SES
+        try:
+            send_email_via_ses(submission)
+        except Exception as e:
+            print(f"Failed to send email: {str(e)}")
+            # Still return success to user - we'll retry or handle via logs
 
         return {
             'statusCode': 200,
