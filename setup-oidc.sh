@@ -135,8 +135,39 @@ done
 
 echo -e "${GREEN}✅ Policies attached${NC}"
 
+# Step 4: Add CloudWatch Logs inline policy
+echo ""
+echo -e "${YELLOW}Step 4: Adding CloudWatch Logs permissions...${NC}"
+
+cat > /tmp/logs-policy.json << EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents",
+        "logs:DescribeLogGroups",
+        "logs:DescribeLogStreams",
+        "logs:DeleteLogGroup"
+      ],
+      "Resource": "arn:aws:logs:us-east-1:${ACCOUNT_ID}:log-group:/aws/lambda/*"
+    }
+  ]
+}
+EOF
+
+aws iam put-role-policy \
+    --role-name "$ROLE_NAME" \
+    --policy-name "CloudWatchLogsPolicy" \
+    --policy-document file:///tmp/logs-policy.json 2>/dev/null || true
+
+echo -e "${GREEN}✅ CloudWatch Logs permissions added${NC}"
+
 # Cleanup
-rm -f /tmp/trust-policy.json
+rm -f /tmp/trust-policy.json /tmp/logs-policy.json
 
 # Clear credentials
 unset AWS_ACCESS_KEY_ID
